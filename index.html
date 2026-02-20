@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SJCET Canteen</title>
+
+    <!-- EmailJS -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
+            padding: 30px;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: slideDown 0.8s ease;
+        }
+
+        /* MENU GRID */
+        .menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .item {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: fadeUp 0.8s ease forwards;
+        }
+
+        .item:hover {
+            transform: translateY(-8px) scale(1.03);
+            box-shadow: 0 20px 30px rgba(0,0,0,0.2);
+        }
+
+        button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #764ba2;
+            transform: scale(1.05);
+        }
+
+        /* CART */
+        #cart {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            animation: fadeUp 1s ease;
+        }
+
+        /* MODALS */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 300px;
+            transform: scale(0.7);
+            animation: popIn 0.4s ease forwards;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        /* ANIMATIONS */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-40px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes fadeUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes popIn {
+            to { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+<h1>🍽 SJCET Canteen</h1>
+
+<div class="menu">
+    <div class="item">
+        <h3>Tea</h3>
+        <p>₹10</p>
+        <button onclick="addToCart('Tea',10)">Add</button>
+    </div>
+    <div class="item">
+        <h3>Coffee</h3>
+        <p>₹15</p>
+        <button onclick="addToCart('Coffee',15)">Add</button>
+    </div>
+    <div class="item">
+        <h3>Samosa</h3>
+        <p>₹20</p>
+        <button onclick="addToCart('Samosa',20)">Add</button>
+    </div>
+</div>
+
+<div id="cart">
+    <h2>🛒 Cart</h2>
+    <div id="cartItems"></div>
+    <h3>Total: ₹<span id="cartTotal">0</span></h3>
+    <button onclick="openCheckout()">Checkout</button>
+</div>
+
+<!-- Checkout Modal -->
+<div class="modal" id="checkoutModal">
+    <div class="modal-content">
+        <h3>Checkout</h3>
+        <form id="checkoutForm">
+            <input type="text" id="studentName" placeholder="Name" required>
+            <input type="text" id="regNo" placeholder="Register Number" required>
+            <input type="email" id="studentEmail" placeholder="Email" required>
+            <button type="submit">Place Order</button>
+        </form>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal" id="successModal">
+    <div class="modal-content">
+        <h3>✅ Order Successful!</h3>
+        <p>Your Token: <strong id="tokenNumber"></strong></p>
+        <button onclick="closeSuccess()">Close</button>
+    </div>
+</div>
+
+<script>
+const EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY";
+const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";
+const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
+
+emailjs.init(EMAILJS_PUBLIC_KEY);
+
+let cart = [];
+let currentTotal = 0;
+
+function addToCart(name, price) {
+    const existing = cart.find(item => item.name === name);
+    if (existing) existing.quantity++;
+    else cart.push({ name, price, quantity: 1 });
+    updateCart();
+}
+
+function updateCart() {
+    const cartItems = document.getElementById("cartItems");
+    const cartTotal = document.getElementById("cartTotal");
+    cartItems.innerHTML = "";
+    currentTotal = 0;
+
+    cart.forEach(item => {
+        const div = document.createElement("div");
+        div.textContent = `${item.name} x ${item.quantity}`;
+        cartItems.appendChild(div);
+        currentTotal += item.price * item.quantity;
+    });
+
+    cartTotal.textContent = currentTotal;
+}
+
+function openCheckout() {
+    if (cart.length === 0) {
+        alert("Cart is empty!");
+        return;
+    }
+    document.getElementById("checkoutModal").style.display = "flex";
+}
+
+function closeSuccess() {
+    document.getElementById("successModal").style.display = "none";
+}
+
+document.getElementById("checkoutForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const token = "SJCET-" + Math.floor(1000 + Math.random() * 9000);
+    document.getElementById("tokenNumber").textContent = token;
+
+    document.getElementById("checkoutModal").style.display = "none";
+    document.getElementById("successModal").style.display = "flex";
+
+    cart = [];
+    updateCart();
+    this.reset();
+});
+</script>
+
+</body>
+</html>
