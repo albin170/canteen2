@@ -6,7 +6,6 @@
     <!-- EmailJS -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
-    <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
     <style>
@@ -28,10 +27,8 @@
             text-align: center;
             color: white;
             margin-bottom: 30px;
-            animation: slideDown 0.8s ease;
         }
 
-        /* MENU GRID */
         .menu {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -44,13 +41,11 @@
             border-radius: 15px;
             text-align: center;
             box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            animation: fadeUp 0.8s ease forwards;
+            transition: transform 0.3s ease;
         }
 
         .item:hover {
             transform: translateY(-8px) scale(1.03);
-            box-shadow: 0 20px 30px rgba(0,0,0,0.2);
         }
 
         button {
@@ -60,25 +55,21 @@
             background: #667eea;
             color: white;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: 0.3s;
         }
 
         button:hover {
             background: #764ba2;
-            transform: scale(1.05);
         }
 
-        /* CART */
         #cart {
             margin-top: 30px;
             background: white;
             padding: 20px;
             border-radius: 15px;
             box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-            animation: fadeUp 1s ease;
         }
 
-        /* MODALS */
         .modal {
             display: none;
             position: fixed;
@@ -94,9 +85,7 @@
             background: white;
             padding: 25px;
             border-radius: 15px;
-            width: 300px;
-            transform: scale(0.7);
-            animation: popIn 0.4s ease forwards;
+            width: 320px;
         }
 
         input {
@@ -107,24 +96,9 @@
             border: 1px solid #ccc;
         }
 
-        /* ANIMATIONS */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideDown {
-            from { transform: translateY(-40px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        @keyframes fadeUp {
-            from { transform: translateY(30px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        @keyframes popIn {
-            to { transform: scale(1); }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -165,7 +139,7 @@
             <input type="text" id="studentName" placeholder="Name" required>
             <input type="text" id="regNo" placeholder="Register Number" required>
             <input type="email" id="studentEmail" placeholder="Email" required>
-            <button type="submit">Place Order</button>
+            <button type="submit" id="submitBtn">Place Order</button>
         </form>
     </div>
 </div>
@@ -227,15 +201,49 @@ function closeSuccess() {
 document.getElementById("checkoutForm").addEventListener("submit", function(e) {
     e.preventDefault();
 
+    const submitBtn = document.getElementById("submitBtn");
+    submitBtn.textContent = "Sending...";
+    submitBtn.classList.add("loading");
+
+    const name = document.getElementById("studentName").value.trim();
+    const regNo = document.getElementById("regNo").value.trim();
+    const email = document.getElementById("studentEmail").value.trim();
+
+    const orderDetails = cart.map(item =>
+        `${item.name} x ${item.quantity} = Rs. ${item.price * item.quantity}`
+    ).join("\n");
+
     const token = "SJCET-" + Math.floor(1000 + Math.random() * 9000);
-    document.getElementById("tokenNumber").textContent = token;
 
-    document.getElementById("checkoutModal").style.display = "none";
-    document.getElementById("successModal").style.display = "flex";
+    const templateParams = {
+        student_name: name,
+        register_number: regNo,
+        student_email: email,
+        order_details: orderDetails,
+        total_amount: currentTotal,
+        token_number: token
+    };
 
-    cart = [];
-    updateCart();
-    this.reset();
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+        .then(function() {
+
+            document.getElementById("tokenNumber").textContent = token;
+            document.getElementById("checkoutModal").style.display = "none";
+            document.getElementById("successModal").style.display = "flex";
+
+            cart = [];
+            updateCart();
+            document.getElementById("checkoutForm").reset();
+
+        })
+        .catch(function(error) {
+            console.error("Email Error:", error);
+            alert("Email sending failed.");
+        })
+        .finally(function() {
+            submitBtn.textContent = "Place Order";
+            submitBtn.classList.remove("loading");
+        });
 });
 </script>
 
